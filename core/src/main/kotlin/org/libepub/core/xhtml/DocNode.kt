@@ -48,6 +48,19 @@ class DocNode(
         for (child in childList) yieldAll(child.walk())
     }
 
+    /** Appends [child] and returns this node, for programmatic document builders. */
+    fun append(child: DocNode): DocNode {
+        child.parent = this
+        childList.add(child)
+        return this
+    }
+
+    /** Appends a text child (empty text is ignored). */
+    fun appendText(value: String): DocNode {
+        if (value.isEmpty()) return this
+        return append(DocNode(NodeKind.TEXT, text = value))
+    }
+
     fun findAll(name: String): List<DocNode> =
         walk().filter { it.kind == NodeKind.ELEMENT && it.name == name }.toList()
 
@@ -58,5 +71,19 @@ class DocNode(
     fun textContent(): String = when (kind) {
         NodeKind.TEXT -> text
         NodeKind.ELEMENT -> childList.joinToString("") { it.textContent() }
+    }
+
+    companion object {
+        /** Programmatic element node (used by non-XHTML sources such as plain text). */
+        fun element(
+            name: String,
+            attributes: Map<String, String> = emptyMap(),
+            children: List<DocNode> = emptyList(),
+        ): DocNode = DocNode(NodeKind.ELEMENT, name = name, attributes = attributes).apply {
+            children.forEach { append(it) }
+        }
+
+        /** Programmatic text node. */
+        fun text(value: String): DocNode = DocNode(NodeKind.TEXT, text = value)
     }
 }
