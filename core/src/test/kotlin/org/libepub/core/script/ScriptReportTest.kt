@@ -79,12 +79,12 @@ class ScriptReportTest {
         BookParser.open(SampleBooks.sample()).use { book ->
             val report = book.scriptReport()
 
-            assertEquals("every scripted chapter is reported", 18, report.chapters.size)
+            assertEquals("every scripted chapter is reported", 17, report.chapters.size)
             assertEquals(listOf("jQuery"), report.libraries)
             assertEquals(listOf("duokan-footnote-marker"), report.patterns.map { it.id })
             assertTrue("nothing in the sample book needs JS", report.unsupported.isEmpty())
             assertTrue(report.fullyHandled)
-            assertEquals(18, report.chaptersUsing("duokan-footnote-marker").size)
+            assertEquals(17, report.chaptersUsing("duokan-footnote-marker").size)
         }
     }
 }

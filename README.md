@@ -1,5 +1,7 @@
 # libepub
 
+[![CI](https://github.com/TanakaLun/libepub/actions/workflows/ci.yml/badge.svg)](https://github.com/TanakaLun/libepub/actions/workflows/ci.yml)
+
 纯原生 Android EPUB 阅读引擎：**零 WebView、零 JS**，解析、CSS 级联、排版、分页、绘制全部自研。
 面向 Compose 阅读器，完整支持多看（Duokan）样书的特殊布局：`【注】` 脚注、单图/图集、
 `DK-*` 字体回退、竖排 `vertical-rl`、ruby、着重号与文字装饰。
@@ -65,7 +67,7 @@ report.libraries        // ["jQuery"]
 report.unsupported      // [] 表示这本书的脚本全部有原生等价
 ```
 
-真实样书里 18/24 章加载 92.7 KB 的 `notereplace.js`（jQuery 1.7.2 + 4 行
+真实样书里 17/24 章加载 92.7 KB 的 `notereplace.js`（jQuery 1.7.2 + 4 行
 `$(".duokan-footnote").html("【注】")`），引擎已原生把脚注标记渲染为「【注】」，
 所以这本书在 `unsupported` 里是空的。识别规则、Rhino 可行性实测与扩展方式见
 [`docs/script-support.md`](docs/script-support.md)。
@@ -74,7 +76,7 @@ report.unsupported      // [] 表示这本书的脚本全部有原生等价
 
 ```bash
 ./gradlew build                     # core JVM + render Robolectric + app 打包
-./gradlew :core:test                # 215 个单元测试
+./gradlew :core:test                # 235 个单元测试
 ./gradlew :render:testDebugUnitTest # Robolectric 渲染/交互
 ./gradlew :app:testDebugUnitTest    # 进度/目录状态机
 ./gradlew :app:assembleDebug        # APK
@@ -85,7 +87,7 @@ report.unsupported      // [] 表示这本书的脚本全部有原生等价
 > **测试语料**：仓库不包含验收用的样书（受版权保护）。把任意 `.epub` 放进 `assets/`，
 > 或用 `-Dlibepub.sample=/path/to/book.epub` 指定路径；两者都没有时，依赖真实语料的测试会被
 > **跳过**而不是失败，合成语料（`SyntheticZips` / `TestBooks.syntheticFile()`）覆盖其余全部逻辑。
-> 统计：`core 215 / render 27 / app 9`（本机带样书时）。
+> 统计：`core 235 / render 27 / app 9`（本机带样书时）。
 
 > Robolectric 在 Linux aarch64 上不支持 native graphics，测试使用 legacy 图形；
 > `ComposeGlyphMeasurer` 在检测到平台字体度量为零时回退到 em 估算，真机始终走 `Paint`。

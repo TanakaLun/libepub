@@ -58,7 +58,7 @@ document.scriptAudit.patterns.forEach { println("${it.id} -> ${it.support}") }
 val report = book.scriptReport()
 println(report.libraries)          // ["jQuery"]
 println(report.unsupported)        // [] —— 这本书不需要 JS
-report.chaptersUsing("duokan-footnote-marker")  // 18 个章节
+report.chaptersUsing("duokan-footnote-marker")  // 17 个章节
 ```
 
 告警会写进 `book.warnings`：
