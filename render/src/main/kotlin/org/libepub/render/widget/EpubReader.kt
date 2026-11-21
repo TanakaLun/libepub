@@ -37,10 +37,11 @@ fun EpubReader(
 fun EpubReaderContent(
     state: EpubReaderState,
     modifier: Modifier = Modifier,
+    swipeEnabled: Boolean = true,
 ) {
     Box(modifier.fillMaxSize()) {
         when (state.mode) {
-            ReaderMode.PAGED -> EpubPager(state)
+            ReaderMode.PAGED -> EpubPager(state, swipeEnabled = swipeEnabled)
             ReaderMode.SCROLL -> EpubScroll(state)
         }
     }

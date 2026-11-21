@@ -30,6 +30,7 @@ fun EpubPager(
     state: EpubReaderState,
     modifier: Modifier = Modifier,
     onPageChanged: (Int) -> Unit = {},
+    swipeEnabled: Boolean = true,
 ) {
     val density = LocalDensity.current
     SideEffect { state.density = density }
@@ -58,7 +59,7 @@ fun EpubPager(
             .fillMaxSize()
             .testTag("page")
             .onSizeChanged { state.setViewport(it.width.toFloat(), it.height.toFloat()) }
-            .pointerInput(state.spineIndex, paged?.pageCount, state.pageIndex) {
+            .then(if (swipeEnabled) Modifier.pointerInput(state.spineIndex, paged?.pageCount, state.pageIndex) {
                 var total = 0f
                 detectHorizontalDragGestures(
                     onDragStart = { total = 0f },
@@ -68,7 +69,7 @@ fun EpubPager(
                     },
                     onDragCancel = { total = 0f },
                 ) { _, dragAmount -> total += dragAmount }
-            },
+            } else Modifier)
     ) {
         val theme: ReaderTheme = state.theme
         if (page != null) {
