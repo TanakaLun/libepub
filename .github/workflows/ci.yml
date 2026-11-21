@@ -24,18 +24,13 @@ jobs:
           distribution: temurin
           java-version: '21'
 
-      # GitHub runners ship the Android SDK; android-actions/setup-android@v3
-      # now fails because it tries to install the retired "tools" package, so
-      # install only what this build needs and let AGP fetch anything missing.
-      - name: Install Android SDK packages
-        run: |
-          SDKMANAGER="${ANDROID_HOME:-/usr/local/lib/android/sdk}/cmdline-tools/latest/bin/sdkmanager"
-          [ -x "$SDKMANAGER" ] || SDKMANAGER="$(find "${ANDROID_HOME:-/usr/local/lib/android/sdk}" -name sdkmanager -type f | head -n 1)"
-          echo "sdkmanager: $SDKMANAGER"
-          yes | "$SDKMANAGER" --licenses >/dev/null 2>&1 || true
-          "$SDKMANAGER" --list 2>/dev/null | grep -E '^\s+platforms;android-3[6-9]' | head -10 || true
-          "$SDKMANAGER" --install "platform-tools" "platforms;android-37.0" "build-tools;37.0.0" \
-            || echo "sdkmanager could not install everything; AGP will download what is missing"
+      # Runners ship the Android SDK; v4 fixes the retired "tools" package that
+      # made v3 fail, and accepts licenses so AGP can fetch missing packages.
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v4
+
+      - name: Install SDK packages used by this build
+        run: sdkmanager --install "platform-tools" "platforms;android-37.0" "build-tools;37.0.0" >/dev/null
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
@@ -93,13 +88,11 @@ jobs:
           distribution: temurin
           java-version: '21'
 
-      - name: Install Android SDK packages
-        run: |
-          SDKMANAGER="${ANDROID_HOME:-/usr/local/lib/android/sdk}/cmdline-tools/latest/bin/sdkmanager"
-          [ -x "$SDKMANAGER" ] || SDKMANAGER="$(find "${ANDROID_HOME:-/usr/local/lib/android/sdk}" -name sdkmanager -type f | head -n 1)"
-          yes | "$SDKMANAGER" --licenses >/dev/null 2>&1 || true
-          "$SDKMANAGER" --install "platform-tools" "platforms;android-37.0" "build-tools;37.0.0" \
-            || echo "sdkmanager could not install everything; AGP will download what is missing"
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v4
+
+      - name: Install SDK packages used by this build
+        run: sdkmanager --install "platform-tools" "platforms;android-37.0" "build-tools;37.0.0" >/dev/null
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
