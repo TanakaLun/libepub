@@ -90,7 +90,7 @@ internal class BoxTreeBuilder(
     private fun buildContainer(box: Box, node: DocNode, style: ComputedStyle) {
         for (child in node.children) {
             if (child.kind == NodeKind.TEXT) {
-                if (child.text.isNotEmpty()) box.inline.add(InlineItem.Text(child.text, style, null))
+                if (child.text.isNotEmpty()) box.inline.add(InlineItem.Text(child.text, style, child))
                 continue
             }
             val childStyle = styles[child] ?: continue
