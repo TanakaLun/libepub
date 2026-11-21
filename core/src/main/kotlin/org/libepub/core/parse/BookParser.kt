@@ -9,6 +9,9 @@ import org.libepub.core.model.Document
 import org.libepub.core.model.EpubMetadata
 import org.libepub.core.model.EpubPackage
 import org.libepub.core.model.SpineItem
+import org.libepub.core.script.ScriptAudit
+import org.libepub.core.script.ScriptReport
+import org.libepub.core.script.ScriptSourceProvider
 import org.libepub.core.toc.Toc
 import org.libepub.core.toc.TocParser
 import org.libepub.core.util.LruStore
@@ -37,6 +40,17 @@ class BookParser private constructor(
 
     val warnings: WarningSink get() = container.warnings
 
+    /** External script text by zip path; a book ships one or two, so no eviction. */
+    private val scriptTexts = HashMap<String, String>(2)
+
+    private val scriptProvider = ScriptSourceProvider { href ->
+        scriptTexts[href] ?: if (container.exists(href)) {
+            container.readText(href).also { scriptTexts[href] = it }
+        } else {
+            null
+        }
+    }
+
     val metadata: EpubMetadata get() = packageDoc.metadata
 
     val spine: List<SpineItem> get() = packageDoc.spine
@@ -47,9 +61,27 @@ class BookParser private constructor(
     /** Parses (or returns the cached) content document at [href]. */
     fun chapter(href: String): Document {
         documentCache.get(href)?.let { return it }
-        val document = XhtmlParser.parse(container.readText(href), href, warnings)
+        val document = XhtmlParser.parse(container.readText(href), href, warnings, scriptProvider)
         documentCache.put(href, document)
         return document
+    }
+
+    /**
+     * Walks the spine and reports what every chapter's `<script>` elements do,
+     * mapped to the reader's native behaviour. Nothing is executed; this is the
+     * "we ignore JS, and here is exactly what that means" report.
+     *
+     * Parses any chapter that is not already cached, so call it off the UI
+     * thread when the book is large.
+     */
+    fun scriptReport(): ScriptReport {
+        val chapters = LinkedHashMap<String, ScriptAudit>(4)
+        for (item in readableSpine) {
+            val href = item.href ?: continue
+            val audit = chapter(href).scriptAudit
+            if (!audit.isEmpty) chapters[href] = audit
+        }
+        return ScriptReport(chapters)
     }
 
     /**

@@ -52,7 +52,23 @@
 | 纯图片页垂直居中 | ✅ |
 | 滚动模式 | ✅ |
 | 脚注弹窗 / 图集 / 双指缩放 | ✅ |
-| DRM、固定版式 FXL、media overlays、JS、绝对定位 | ⛔ 明确不支持（优雅降级/告警） |
+| 脚本（JS）识别 → 原生等价（不执行 JS） | ✅ 见 [`docs/script-support.md`](docs/script-support.md) |
+| DRM、固定版式 FXL、media overlays、JS 执行、绝对定位 | ⛔ 明确不支持（优雅降级/告警） |
+
+## 脚本（JS）
+
+引擎不执行脚本，而是识别脚本**做什么**，再映射到原生能力：
+
+```kotlin
+val report = book.scriptReport()   // 会解析未缓存章节，放后台线程
+report.libraries        // ["jQuery"]
+report.unsupported      // [] 表示这本书的脚本全部有原生等价
+```
+
+真实样书里 18/24 章加载 92.7 KB 的 `notereplace.js`（jQuery 1.7.2 + 4 行
+`$(".duokan-footnote").html("【注】")`），引擎已原生把脚注标记渲染为「【注】」，
+所以这本书在 `unsupported` 里是空的。识别规则、Rhino 可行性实测与扩展方式见
+[`docs/script-support.md`](docs/script-support.md)。
 
 ## 构建与测试
 
@@ -151,6 +167,7 @@ fun Reader(state: EpubReaderState) {
 
 - 不支持 DRM（`encryption.xml` 中未知密码算法会抛 `DrmProtectedException`；IDPF/Adobe
   字体混淆按规范支持）。
-- 固定版式（FXL）、media overlays、脚本、`position:absolute/fixed` 不支持或降级。
+- 固定版式（FXL）、media overlays、JS 执行、`position:absolute/fixed` 不支持或降级；
+  脚本本身会被识别并映射到原生等价（见 [`docs/script-support.md`](docs/script-support.md)）。
 - 不访问网络：远程样式表/图片/字体一律忽略并告警。
 - 文本选择、书签、搜索、高亮不在库内（可在 app 层基于 `ChapterLayout`/`Locator` 实现）。

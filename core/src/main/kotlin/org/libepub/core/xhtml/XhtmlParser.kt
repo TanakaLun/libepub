@@ -2,6 +2,9 @@ package org.libepub.core.xhtml
 
 import org.libepub.core.EpubFormatException
 import org.libepub.core.model.Document
+import org.libepub.core.script.RawScript
+import org.libepub.core.script.ScriptAuditor
+import org.libepub.core.script.ScriptSourceProvider
 import org.libepub.core.semantics.SemanticIndex
 import org.libepub.core.util.WarningSink
 import org.kxml2.io.KXmlParser
@@ -17,8 +20,14 @@ import org.xmlpull.v1.XmlPullParser
  */
 object XhtmlParser {
 
-    fun parse(raw: String, href: String = "", warnings: WarningSink = WarningSink()): Document {
-        val normalized = MarkupNormalizer.normalize(raw, warnings)
+    fun parse(
+        raw: String,
+        href: String = "",
+        warnings: WarningSink = WarningSink(),
+        scriptSource: ScriptSourceProvider? = null,
+    ): Document {
+        val rawScripts = ArrayList<RawScript>(0)
+        val normalized = MarkupNormalizer.normalize(raw, warnings, rawScripts)
         val parser = KXmlParser()
         parser.setFeature(XmlPullParser.FEATURE_PROCESS_NAMESPACES, false)
         parser.setInput(normalized.reader())
@@ -113,6 +122,7 @@ object XhtmlParser {
 
         val idIndex = ids.mapValues { (_, list) -> list.toList() }
         val semantics = SemanticIndex.build(documentRoot, href, idIndex, warnings)
+        val scriptAudit = ScriptAuditor.audit(href, rawScripts, scriptSource, warnings)
 
         return Document(
             root = documentRoot,
@@ -124,6 +134,7 @@ object XhtmlParser {
             footnotes = semantics.footnotes,
             imageGroups = semantics.imageGroups,
             pageBreaks = semantics.pageBreaks,
+            scriptAudit = scriptAudit,
         )
     }
 

@@ -3,6 +3,7 @@ package org.libepub.core.model
 import org.libepub.core.semantics.Footnote
 import org.libepub.core.semantics.ImageGroup
 import org.libepub.core.semantics.PageBreak
+import org.libepub.core.script.ScriptAudit
 import org.libepub.core.util.WarningSink
 import org.libepub.core.xhtml.DocNode
 
@@ -28,6 +29,8 @@ class Document(
     val imageGroups: List<ImageGroup> = emptyList(),
     /** `epub:type="pagebreak"` markers in document order. */
     val pageBreaks: List<PageBreak> = emptyList(),
+    /** Scripts in the document and how the reader answers them (never executed). */
+    val scriptAudit: ScriptAudit = ScriptAudit.NONE,
 ) {
     /** First node with [id], or null (duplicate ids resolve to the first in document order). */
     fun byId(id: String): DocNode? = ids[id]?.firstOrNull()

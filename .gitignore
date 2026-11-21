@@ -9,3 +9,6 @@ local.properties
 # Drop any EPUB into assets/ (or pass -Dlibepub.sample=/path/to/book.epub)
 # to run the real-book tests; everything else uses synthetic books.
 assets/*.epub
+
+# Kotlin 2.x project-local caches
+.kotlin/

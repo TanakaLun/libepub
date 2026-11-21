@@ -1,5 +1,6 @@
 package org.libepub.core.xhtml
 
+import org.libepub.core.script.RawScript
 import org.libepub.core.util.WarningSink
 
 /**
@@ -7,8 +8,9 @@ import org.libepub.core.util.WarningSink
  * and without any network access:
  *
  *  - strips `<!DOCTYPE ...>` / declarations (an external DTD is never fetched)
- *  - drops `<script>` elements entirely (JS never runs and raw `<` inside would
- *    break XML lexing)
+ *  - drops `<script>` elements from the tree (JS never runs and raw `<` inside
+ *    would break XML lexing); when a collector is supplied the element's text
+ *    and attributes are handed to the script auditor instead of being lost
  *  - keeps `<style>` content as CDATA (CSS is collected by the parser)
  *  - expands HTML4 named entities; escapes bare `&` and stray `<`
  *  - repairs tag balance: mismatched end tags auto-close intervening elements,
@@ -25,14 +27,18 @@ internal object MarkupNormalizer {
 
     private val XML_PREDEFINED = setOf("amp", "lt", "gt", "quot", "apos")
 
-    fun normalize(raw: String, warnings: WarningSink): String {
+    fun normalize(
+        raw: String,
+        warnings: WarningSink,
+        scripts: MutableList<RawScript>? = null,
+    ): String {
         val out = StringBuilder(raw.length + 64)
         val stack = ArrayList<String>(8)
         var i = 0
         val n = raw.length
         while (i < n) {
             when (raw[i]) {
-                '<' -> i = handleLt(raw, i, out, stack, warnings)
+                '<' -> i = handleLt(raw, i, out, stack, warnings, scripts)
                 '&' -> i = handleAmp(raw, i, out, warnings)
                 else -> {
                     out.append(raw[i])
@@ -58,6 +64,7 @@ internal object MarkupNormalizer {
         out: StringBuilder,
         stack: ArrayList<String>,
         warnings: WarningSink,
+        scripts: MutableList<RawScript>?,
     ): Int {
         val n = raw.length
         if (raw.startsWith("<!--", i)) {
@@ -80,7 +87,7 @@ internal object MarkupNormalizer {
             return if (end < 0) n else end + 2 // processing instructions are dropped
         }
         if (raw.startsWith("</", i)) return handleEndTag(raw, i, out, stack, warnings)
-        if (i + 1 < n && raw[i + 1].isLetter()) return handleStartTag(raw, i, out, stack, warnings)
+        if (i + 1 < n && raw[i + 1].isLetter()) return handleStartTag(raw, i, out, stack, warnings, scripts)
         out.append("&lt;")
         return i + 1
     }
@@ -126,6 +133,7 @@ internal object MarkupNormalizer {
         out: StringBuilder,
         stack: ArrayList<String>,
         warnings: WarningSink,
+        scripts: MutableList<RawScript>?,
     ): Int {
         val n = raw.length
         val gt = findTagEnd(raw, i)
@@ -146,9 +154,23 @@ internal object MarkupNormalizer {
 
         when (lower) {
             "script" -> {
-                warnings.warnOnce("xhtml.script", "ignored <script> element (JS is never executed)")
                 val close = raw.indexOf("</script", gt + 1, ignoreCase = true)
-                if (close < 0) return n
+                val innerEnd = if (close < 0) n else close
+                if (scripts != null) {
+                    scripts.add(
+                        RawScript(
+                            src = attrValue(body, "src"),
+                            type = attrValue(body, "type") ?: attrValue(body, "language"),
+                            inline = raw.substring(gt + 1, innerEnd),
+                        ),
+                    )
+                } else {
+                    warnings.warnOnce("xhtml.script", "ignored <script> element (JS is never executed)")
+                }
+                if (close < 0) {
+                    warnings.warnOnce("xhtml.script-unclosed", "unclosed <script> at end of document")
+                    return n
+                }
                 val gt2 = raw.indexOf('>', close)
                 return if (gt2 < 0) n else gt2 + 1
             }
@@ -393,6 +415,24 @@ internal object MarkupNormalizer {
         var i = 0
         while (i < inner.length && isNameChar(inner[i])) i++
         return inner.substring(0, i)
+    }
+
+    /** Value of [name] in a re-serialized tag (`name attr="value"`), or null. */
+    private fun attrValue(tag: String, name: String): String? {
+        var from = 0
+        while (true) {
+            val at = tag.indexOf(name, from)
+            if (at < 0) return null
+            from = at + name.length
+            if (at > 0 && !tag[at - 1].isWhitespace()) continue
+            if (tag.indexOf('=', at + name.length) != at + name.length) continue
+            val quoteAt = at + name.length + 1
+            val quote = tag.getOrNull(quoteAt) ?: continue
+            if (quote != '"' && quote != '\'') continue
+            val end = tag.indexOf(quote, quoteAt + 1)
+            if (end < 0) continue
+            return tag.substring(quoteAt + 1, end)
+        }
     }
 
     private fun isNameChar(c: Char): Boolean = c.isLetterOrDigit() || c in "-_:."
